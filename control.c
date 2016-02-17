@@ -25,7 +25,22 @@ Pin 12(GPIO) - Open the Dump valve. The valve will remain open as long as this p
 Pin 13(GPIO) - Activate the circulation pump. The pump will remain active as long as this pin is active.
 */
 
+#define PIN_MASTER_OPEN 2
+#define PIN_MASTER_CLOSE 3
+#define PIN_POWER 4
 
+#define PIN_POWER_CHANNEL_A 8
+#define PIN_POWER_CHANNEL_B 9
+#define PIN_VALVE_CHANNEL_A 10
+#define PIN_VALVE_CHANNEL_B 11
+
+#define PIN_DUMP 12
+#define PIN_RECIRCULATE 13
+
+struct timespec valveLatchTime;
+
+
+char * pins[13];
 
 
 /*
@@ -33,10 +48,8 @@ Cycle Specifications
 There are 5 cycles: (Off, Prime, Channel A, Channel B, and Dump)
 
 Off
-This is the low power state. The only thing energized is the artik. Master Pins are off.
 
 Prime
-The Artik decides when to turn the machine on. Master pin 8 flips on (100ms). Once on, Eddi starts a priming cycle. In this cycle, Channel A valves are clean, Channel B valves are dirty, and the dump valve is open. The dump valve closes when the recirculation flow sensor reads a steady-state flow rate that is greater than zero. The priming cycle stops 5 minutes after the dump valve is closed (for wetting the membranes).
 
 Channel A
 This is a desalination cycle. Channel A valves are clean, Channel B valves are dirty, dump valve is closed. The graphite is in state A.
@@ -59,7 +72,7 @@ int currentState = STATE_OFF;
 
 
 
-int digitalPinMode(int pin){
+int initializePin(int pin){
   FILE * fd;
   char fName[128];
 
@@ -68,10 +81,8 @@ int digitalPinMode(int pin){
     printf("Error: unable to export pin\n");
     return 1;
   }
-
   fprintf(fd, "%d\n", pin);
   fclose(fd);
-
 
   // Setting direction of the pin
   sprintf(fName, "/sys/class/gpio/gpio%d/direction", pin);
@@ -79,23 +90,48 @@ int digitalPinMode(int pin){
     printf("Error: can't open pin direction\n");
     return 2;
   }
-
   fprintf(fd, "out\n");
-
   fclose(fd);
+
+  // save value file for quick access
+  char * valueFile = malloc(128 * sizeof(char));
+  sprintf(valueFile, "/sys/class/gpio/gpio%d/value", pin);
+  pins[pin] = valueFile;
+
+  return 0;
+}
+
+int setPin(int pin, int state){
+  FILE * fd;
+  if((fd = fopen(pins[pin], "w")) == NULL) {
+    printf("Error: can't open pin value\n");
+    return 2;
+  }
+  fprintf(fd, "%d\n", state);
   return 0;
 }
 
 
-void initializeControl(){
+
+int main( int argc, char **argv ){
   char *fName;
   for( int pin=2; pin < 14; pin++ ){
-    sprintf(fName, "/sys/class/gpio/gpio%d/direction", pin);
-
+    initializePin(pin);
     if( pin == 4 ){
       pin = 7;
     }
   }
+
+  valveLatchTime.tv_sec = 0;
+  valveLatchTime.tv_nsec = 200000000L; // only needs 200 ms
+
+  // in a loop, run control state command
+  int rc = 0;
+  while( rc != -1 ){
+    rc = determineControlState();
+  }
+
+
 }
 
 
@@ -106,7 +142,6 @@ int determineControlState(){
   if( newState != currentState ){
     setState(newState);
   }
-
   return currentState;
 }
 
@@ -114,10 +149,31 @@ static void setState(int newState){
   // control pins for state;
   switch(newState){
     case STATE_OFF:
-      // turn all pins off
+      // This is the low power state. The only thing energized is the artik. Master Pins are off.
+      for( int pin=2; pin < 14; pin++ ){
+        setPin(pin, 0);
+        if( pin == 4 ){
+          pin = 7;
+        }
+      }
       exit(0);
       break;
     case STATE_PRIME:
+      // The Artik decides when to turn the machine on.
+      // Master pin 8 flips on (100ms). Once on, Eddi starts a priming cycle.
+      // In this cycle, Channel A valves are clean, Channel B valves are dirty,
+      // and the dump valve is open. The dump valve closes when the
+      // recirculation flow sensor reads a steady-state flow rate that is
+      // greater than zero. The priming cycle stops 5 minutes after the dump
+      // valve is closed (for wetting the membranes).
+      setPin(PIN_POWER, 0);
+      setPin(PIN_MASTER_OPEN, 1);
+      setPin(PIN_POWER_CHANNEL_A, 0);
+      setPin(PIN_POWER_CHANNEL_B, 0);
+      setPin(PIN_VALVE_CHANNEL_A, 1);
+      setPin(PIN_VALVE_CHANNEL_B, 0);
+      setPin(PIN_DUMP, 1);
+      setPin(PIN_RECIRCULATE, 0);
 
       break;
     case STATE_DESAL_A:

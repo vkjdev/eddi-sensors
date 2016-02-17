@@ -124,7 +124,7 @@ void checkFlowSensors(){
 
 
 
-initializeMain(){
+void initializeMain(){
   tim.tv_sec = 0;
   tim.tv_nsec = 1000000L; // every millisecond, read sensor
   // NOTE: This should really be replaced with a timer circuit!!!
