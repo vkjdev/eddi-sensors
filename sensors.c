@@ -39,7 +39,7 @@ long flowCountOut, flowCountDump;
 struct timeval lastTime, thisTime;
 
 
-static int analogRead(#define fName) {
+static int analogRead(const char* fName) {
   FILE * fd;
   char val[8];
 
@@ -82,7 +82,7 @@ int reportSensorValues(){
 	gettimeofday( &thisTime, NULL );
 	float elapsed = (float)(((long long int)thisTime.tv_sec * 1000000L + thisTime.tv_usec) - ((long long int)lastTime.tv_sec * 1000000L + lastTime.tv_usec))/1000000.0;
 	float outFrequency = flowCountOut / elapsed;
-	float dumpFrequency = flowCountRec / elapsed;
+	float dumpFrequency = flowCountDump / elapsed;
 
 	struct SenseSet sense;
 
@@ -90,13 +90,13 @@ int reportSensorValues(){
 	sense.qDump 		= dumpFrequency / 5.5;
 	sense.ppmOut 		= ppmFromVoltage(analogRead(SAL_OUT_FILE));
 	sense.ppmIn 		= ppmFromVoltage(analogRead(SAL_IN_FILE));
-	sense.ppmRecirc = ppmFromVoltage(analogRead(SAL_RECIRC_FILE));
+	sense.ppmRec    = ppmFromVoltage(analogRead(SAL_RECIRC_FILE));
 
 	persistSenseSet(&sense);
 
 	lastTime = thisTime;
 	flowCountOut = 0;
-	flowCountIn = 0;
+	flowCountDump = 0;
 
 	return 0;
 }
@@ -147,11 +147,6 @@ int main(int argc, char** argv){
   int iterationCount = 0; // marks the approximate millisecond
   while(nanosleep(&tim, &timrem) == 0){
   	checkFlowSensors();
-
-    // determine control state every 5 seconds
-    if( iterationCount % 5000 == 0 ){
-			determineControlState();
-    }
 
     // log flow rate every 60 seconds
     if( iterationCount == 59999 ){
