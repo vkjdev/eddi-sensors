@@ -16,23 +16,22 @@ void checkDataFile(){
 
   if( currentDay != DAY_SINCE_EPOCH ){
     if( PERSIST_FILE != NULL && fclose(PERSIST_FILE) != 0 ){
-      fprintf(stderr, "Could not close file!");
+      printf("Could not close file!\n");
       exit(1);
     }
-    char * fileName;
-    sprintf(fileName, "./data/%Lu.dat", currentDay);
-    PERSIST_FILE = fopen(fileName, "a");
+    char fileName[20];
+    sprintf(fileName, "./data/%lu.dat", currentDay);
+    printf("Opening Persist File: %s\n", fileName);
+    PERSIST_FILE = fopen(fileName, "a+");
     if( PERSIST_FILE == NULL ){
-      fprintf(stderr, "Could not open Persist File: %s", fileName);
+      printf("Could not open Persist File: %s\n", fileName);
       exit(1);
-    } else {
-      printf("Opened Persist File: %s", fileName);
     }
     DAY_SINCE_EPOCH = currentDay;
   }
 }
 
-int persistenceInitialize(){
+void persistenceInitialize(){
   checkDataFile();
 }
 
@@ -41,10 +40,10 @@ void persistSenseSet(struct SenseSet *setPtr){
 
   struct SenseSet set = *setPtr;
 
-  char * dataEntry;
-  sprintf(dataEntry, "%Lu|%f|%f|%d|%d|%d", set.timestamp, set.qOut, set.qDump, set.ppmOut, set.ppmIn, set.ppmRec);
+  printf("Persisting Sense Set for Timestamp %lu\n", set.timestamp);
 
-  fwrite(dataEntry, sizeof(dataEntry[0]), sizeof(dataEntry)/sizeof(dataEntry[0]), PERSIST_FILE);
+  fprintf(PERSIST_FILE, "%lu|%f|%f|%d|%d|%d\n", set.timestamp, set.qOut, set.qDump, set.ppmOut, set.ppmIn, set.ppmRec);
+  fflush(PERSIST_FILE);
 }
 
 void persistenceCleanup(){

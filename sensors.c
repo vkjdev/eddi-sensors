@@ -33,6 +33,10 @@ const float salSensorAreaCMSq  = 1.0;
 struct timespec tim;
 struct timespec timrem;
 
+#define PERSISTENCE_TIMER 6000 
+// every 60 seconds, log values
+
+
 // tracking sensor values
 unsigned int lastFlowOut, lastFlowDump, thisFlowOut, thisFlowDump;
 long flowCountOut, flowCountDump;
@@ -86,6 +90,7 @@ int reportSensorValues(){
 
 	struct SenseSet sense;
 
+	sense.timestamp 	= time(NULL);
 	sense.qOut 			= outFrequency / 5.5;
 	sense.qDump 		= dumpFrequency / 5.5;
 	sense.ppmOut 		= ppmFromVoltage(analogRead(SAL_OUT_FILE));
@@ -141,19 +146,22 @@ void initializeSensors(){
 
 
 int main(int argc, char** argv){
+  printf("Initializing...\n");
   initializeMain();
 	initializeSensors();
 
+  printf("Starting Sense Loop\n");
   int iterationCount = 0; // marks the approximate millisecond
   while(nanosleep(&tim, &timrem) == 0){
   	checkFlowSensors();
 
-    // log flow rate every 60 seconds
-    if( iterationCount == 59999 ){
+    if( iterationCount == PERSISTENCE_TIMER ){
       reportSensorValues();
       iterationCount = 0;
     } else {
       iterationCount++;
     }
   }
+
+  return 0;
 }

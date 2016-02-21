@@ -12,7 +12,7 @@ struct SenseSet {
 
 extern void persistSenseSet(struct SenseSet *set);
 
-extern int persistenceInitialize();
+extern void persistenceInitialize();
 
 extern void persistenceCleanup();
 
