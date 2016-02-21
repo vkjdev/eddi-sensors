@@ -3,7 +3,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <persistence.h>
-#include <sensors.h>
 
 /*
 Flow Sensing
@@ -93,7 +92,7 @@ int reportSensorValues(){
 	sense.ppmIn 		= ppmFromVoltage(analogRead(SAL_IN_FILE));
 	sense.ppmRecirc = ppmFromVoltage(analogRead(SAL_RECIRC_FILE));
 
-	persistSenseSet(sense);
+	persistSenseSet(&sense);
 
 	lastTime = thisTime;
 	flowCountOut = 0;
