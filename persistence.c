@@ -31,8 +31,10 @@ int persistenceInitialize(){
   checkDataFile();
 }
 
-void persistSenseSet(struct SenseSet *set){
+void persistSenseSet(struct SenseSet *setPtr){
   checkDataFile();
+
+  struct SenseSet set = *setPtr;
 
   char * dataEntry;
   sprintf(dataEntry, "%Lu|%f|%f|%d|%d|%d", set.timestamp, set.qOut, set.qDump, set.ppmOut, set.ppmIn, set.ppmRec);
