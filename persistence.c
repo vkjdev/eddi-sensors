@@ -12,7 +12,7 @@ unsigned long DAY_SINCE_EPOCH;
 
 void checkDataFile(){
   time_t currentTime = time(NULL);
-  unsigned long currentDay = currentTime % 86400L;
+  unsigned long currentDay = currentTime / 86400L;
 
   if( currentDay != DAY_SINCE_EPOCH ){
     if( PERSIST_FILE != NULL && fclose(PERSIST_FILE) != 0 ){
@@ -20,11 +20,13 @@ void checkDataFile(){
       exit(1);
     }
     char * fileName;
-    sprintf(fileName, "./data/%Lu", currentDay);
+    sprintf(fileName, "./data/%Lu.dat", currentDay);
     PERSIST_FILE = fopen(fileName, "a");
     if( PERSIST_FILE == NULL ){
-      fprintf(stderr, "Could not open Persist File");
+      fprintf(stderr, "Could not open Persist File: %s", fileName);
       exit(1);
+    } else {
+      printf("Opened Persist File: %s", fileName);
     }
     DAY_SINCE_EPOCH = currentDay;
   }
