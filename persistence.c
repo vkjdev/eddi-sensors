@@ -20,8 +20,12 @@ void checkDataFile(){
       exit(1);
     }
     char * fileName;
-    sprintf(fileName, "data/%Lu", currentDay);
+    sprintf(fileName, "./data/%Lu", currentDay);
     PERSIST_FILE = fopen(fileName, "a");
+    if( PERSIST_FILE == NULL ){
+      fprintf(stderr, "Could not open Persist File");
+      exit(1);
+    }
     DAY_SINCE_EPOCH = currentDay;
   }
 }
