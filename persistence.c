@@ -4,7 +4,6 @@
 #include <persistence.h>
 #include <time.h>
 
-#define DEBUG 1
 
 
 FILE * PERSIST_FILE;
@@ -16,7 +15,7 @@ void checkDataFile(){
   unsigned long currentDay = currentTime % 86400L;
 
   if( currentDay != DAY_SINCE_EPOCH ){
-    if( fclose(PERSIST_FILE) != 0 ){
+    if( PERSIST_FILE != NULL && fclose(PERSIST_FILE) != 0 ){
       fprintf(stderr, "Could not close file!");
       exit(1);
     }
