@@ -35,20 +35,17 @@ void persistenceInitialize(){
   checkDataFile();
 }
 
-void persistSenseSet(struct SenseSet *setPtr){
+void persistSenseSet(struct SenseSet *set){
   checkDataFile();
-
-  struct SenseSet set = *setPtr;
-
-  printf("Persisting Sense Set for Timestamp %lu\n", set.timestamp);
-
-  fprintf(PERSIST_FILE, "%lu|%f|%f|%d|%d|%d\n", set.timestamp, set.qOut, set.qDump, set.ppmOut, set.ppmIn, set.ppmRec);
+  fprintf(PERSIST_FILE, "%lu|%f|%f|%d|%d|%d\n",
+      set->timestamp, set->qOut, set->qDump,
+      set->ppmOut, set->ppmIn, set->ppmRec );
   fflush(PERSIST_FILE);
 }
 
 void persistenceCleanup(){
   if( fclose(PERSIST_FILE) != 0 ){
-    fprintf(stderr, "Could not close file!");
+    printf("Could not close file!");
     exit(1);
   }
 }
