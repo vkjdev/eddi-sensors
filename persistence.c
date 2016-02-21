@@ -1,8 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <persistence.h>
-#include <curl/curl.h>
-#include <eddi_id.h>
+#include <time.h>
 
 #define DEBUG 1
 
@@ -11,52 +11,47 @@ CURL *curleasy;
 CURLM *curlmulti;
 int multihandles;
 
-const char* firebaseURL = "https://eddi.firebaseio.com/eddis/"EDDI_ID"/senses";
-struct curl_slist *headers;
+char * EDDI_ID;
+FILE * PERSIST_FILE;
+unsigned long DAY_SINCE_EPOCH;
 
 
-static size_t read_callback(char *buffer, size_t size, size_t nitems, void *instream){
-  struct SenseSet *set = (struct SenseSet *)instream;
-  *buffer = sprintf('{ "%d" : { "flowOut" : %f, "flowDump": %f, "ppmOut": %d, "ppmIn": %d, "ppmRecirc": %d} }',
-    set->timestamp, set->flowOut, set->flowDump, set->ppmOut, set->ppmIn, set=>ppmRecirc);
+void checkDataFile(){
+  time_t currentTime = time(NULL);
+  unsigned long currentDay = currentTime % 86400L;
 
-  if( DEBUG == 1 ){
-    printf("%s\n", buffer);
+  if( currentDay != DAY_SINCE_EPOCH ){
+    if( fclose(PERSIST_FILE) != 0 ){
+      fprintf(stderr, "Could not close file!");
+      exit(1);
+    }
+    PERSIST_FILE = fopen(sprintf("data/%Lu",currentDay), "a");
+    DAY_SINCE_EPOCH = currentDay;
   }
-
-  return strlen(buffer);
 }
 
-
 int persistenceInitialize(){
-  curlmulti = curl_multi_init();
-  if( curlmulti ){
-    curleasy = curl_easy_init();
-    if( curleasy == NULL ){
-      curl_easy_setopt(curleasy, CURLOPT_URL, firebaseURL);
-      curl_easy_setopt(curleasy, CURLOPT_UPLOAD, 1L);
-      curl_easy_setopt(curleasy, CURLOPT_READFUNCTION, read_callback);
-      curl_easy_setopt(curleasy, CURLOPT_CUSTOMREQUEST, 'PATCH');
-      headers = curl_slist_append(headers, "Content-Type: application/json");
-      curl_easy_setopt(curleasy, CURLOPT_HTTPHEADER, headers);
-      curl_multi_add_handle(curlmult, curleasy);
-    } else {
-      return 2;
-    }
-  } else {
-    return 1;
+  EDDI_ID = getenv("EDDI_ID");
+  if( EDDI_ID === NULL ){
+    fprintf(stderr, "EDDI_ID Environment Variable must be set");
+    exit(1);
   }
+
+  checkDataFile();
 }
 
 void persistSenseSet(struct SenseSet *set){
-  curl_easy_setopt(curleasy, CURLOPT_READDATA, set);
-  curl_multi_perform(curlmulti, &multihandles);
-}
+  checkDataFile();
 
-void persistSession(char *name, void* value){
+  char * dataEntry;
+  sprintf(dataEntry, "%Lu|%f|%f|%d|%d|%d", set.timestamp, set.qOut, set.qDump, set.ppmOut, set.ppmIn, set.ppmRec);
 
+  frwite(dataEntry, sizeOf(dataEntry[0]), sizeOf(dataEntry)/sizeOf(dataEntry[0]), PERSIST_FILE);
 }
 
 void persistenceCleanup(){
-  curl_multi_cleanup(curlmulti);
+  if( fclose(PERSIST_FILE) != 0 ){
+    fprintf(stderr, "Could not close file!");
+    exit(1);
+  }
 }
