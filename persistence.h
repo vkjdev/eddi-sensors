@@ -1,7 +1,7 @@
 #ifndef PERSISTENCE_H
 #define PERSISTENCE_H
 
-struct senseSet {
+struct SenseSet {
   long timestamp;
   float qOut;
   float qDump;
@@ -10,7 +10,7 @@ struct senseSet {
   int ppmRec;
 };
 
-extern void persistSenseSet(struct senseSet *set);
+extern void persistSenseSet(struct SenseSet *set);
 
 extern int persistenceInitialize();
 
