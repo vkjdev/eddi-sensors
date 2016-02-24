@@ -66,4 +66,5 @@ void persistenceCleanup(){
   if( socketFile != 0 ){
     close(socketFile);
   }
+  unlink("./data/sensors.sock");
 }
