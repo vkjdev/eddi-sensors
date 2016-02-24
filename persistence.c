@@ -1,51 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <persistence.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <time.h>
 
+#include <persistence.h>
 
 
-FILE * PERSIST_FILE;
-unsigned long DAY_SINCE_EPOCH;
+#define PORT_NUMBER 3661
 
+int socketFile, newSocketFile;
+int rc;
+char setString[256];
 
-void checkDataFile(){
-  time_t currentTime = time(NULL);
-  unsigned long currentDay = currentTime / 86400L;
-
-  if( currentDay != DAY_SINCE_EPOCH ){
-    if( PERSIST_FILE != NULL && fclose(PERSIST_FILE) != 0 ){
-      printf("Could not close file!\n");
-      exit(1);
-    }
-    char fileName[20];
-    sprintf(fileName, "./data/%lu.dat", currentDay);
-    printf("Opening Persist File: %s\n", fileName);
-    PERSIST_FILE = fopen(fileName, "a+");
-    if( PERSIST_FILE == NULL ){
-      printf("Could not open Persist File: %s\n", fileName);
-      exit(1);
-    }
-    DAY_SINCE_EPOCH = currentDay;
-  }
+void error(const char *msg){
+  perror(msg);
+  exit(1);
 }
 
+
+
 void persistenceInitialize(){
-  checkDataFile();
+  socklen_t clientLength;
+  struct sockaddr_un serverAddress, clientAddress;
+
+  // make socket file
+  socketFile = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (socketFile < 0) {
+    error("ERROR opening socket");
+  }
+
+  // make server address
+  bzero((char *) &serverAddress, sizeof(serverAddress));
+  serverAddress.sun_family = AF_UNIX;
+  strncpy(serverAddress.sun_path, "./data/socket", sizeof(serverAddress.sun_path) - 1);
+
+  // bind to socket
+  if( bind(socketFile, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0){
+    error("ERROR on binding");
+  }
+
+  // listen and bind once the client contacts
+  if( listen(socketFile, 5) == -1 ){
+    error("ERROR on listen");
+  }
+
+  clientLength = sizeof(clientAddress);
+  newSocketFile = accept(socketFile, (struct sockaddr *) &clientAddress, &clientLength);
+  if( newSocketFile < 0 ){
+    error("ERROR on accept");
+  }
 }
 
 void persistSenseSet(struct SenseSet *set){
-  checkDataFile();
-  fprintf(PERSIST_FILE, "%lu|%f|%f|%d|%d|%d\n",
+  sprintf(setString, "%lu|%f|%f|%d|%d|%d",
       set->timestamp, set->qOut, set->qDump,
       set->ppmOut, set->ppmIn, set->ppmRec );
-  fflush(PERSIST_FILE);
+  rc = write(newSocketFile, setString, strlen(setString));
+  if( rc < 0 ){
+    error("ERROR writing to socket");
+  }
 }
 
 void persistenceCleanup(){
-  if( fclose(PERSIST_FILE) != 0 ){
-    printf("Could not close file!");
-    exit(1);
-  }
+  close(newSocketFile);
+  close(socketFile);
 }
