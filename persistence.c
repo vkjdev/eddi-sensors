@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <sys/un.h>
 #include <time.h>
 
 #include <persistence.h>
@@ -24,8 +23,7 @@ void error(const char *msg){
 
 
 void persistenceInitialize(){
-  socklen_t clientLength;
-  struct sockaddr_un serverAddress, clientAddress;
+  struct sockaddr_un serverAddress;
 
   // make socket file
   socketFile = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -48,8 +46,7 @@ void persistenceInitialize(){
     error("ERROR on listen");
   }
 
-  clientLength = sizeof(clientAddress);
-  newSocketFile = accept(socketFile, (struct sockaddr *) &clientAddress, &clientLength);
+  newSocketFile = accept(socketFile, NULL, NULL);
   if( newSocketFile < 0 ){
     error("ERROR on accept");
   }
