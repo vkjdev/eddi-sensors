@@ -155,8 +155,10 @@ void sig_handler(int signo){
 
 void initialize(){
   if( signal(SIGINT, sig_handler) == SIG_ERR ){
-    printf("can't catch SIGINT\n");
-    exit(1);
+    error("can't catch SIGINT\n");
+  }
+  if( signal(SIGPIPE, SIG_IGN) == SIG_ERR ){
+    error("can't catch SIGPIPE\n");
   }
 
   tim.tv_sec = 0;

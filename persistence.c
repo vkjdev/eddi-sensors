@@ -50,10 +50,6 @@ void persistenceInitialize(){
   if( newSocketFile < 0 ){
     error("ERROR on accept");
   }
-
-  // set nosigpip option so the process isn't terminated by sigpipe
-  int set = 1;
-  setsockopt(newSocketFile, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
 }
 
 ssize_t persistSenseSet(struct SenseSet *set){
