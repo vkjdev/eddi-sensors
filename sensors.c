@@ -148,6 +148,7 @@ void checkFlowSensors(){
 
 void sig_handler(int signo){
   if( signo == SIGINT ){
+    printf("Handling SIGINT\n");
     persistenceCleanup();
     exit(0);
   }

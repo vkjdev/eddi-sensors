@@ -60,6 +60,10 @@ ssize_t persistSenseSet(struct SenseSet *set){
 }
 
 void persistenceCleanup(){
-  close(newSocketFile);
-  close(socketFile);
+  if( newSocketFile != 0 ){
+    close(newSocketFile);
+  }
+  if( socketFile != 0 ){
+    close(socketFile);
+  }
 }
