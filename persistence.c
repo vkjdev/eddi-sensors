@@ -15,7 +15,7 @@ int socketFile, newSocketFile;
 int rc;
 char setString[256];
 
-void error(const char *msg){
+void errorPersistence(const char *msg){
   perror(msg);
   exit(1);
 }
@@ -28,7 +28,7 @@ void persistenceInitialize(){
   // make socket file
   socketFile = socket(AF_UNIX, SOCK_STREAM, 0);
   if (socketFile < 0) {
-    error("ERROR opening socket");
+    errorPersistence("ERROR opening socket");
   }
 
   // make server address
@@ -38,17 +38,17 @@ void persistenceInitialize(){
 
   // bind to socket
   if( bind(socketFile, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0){
-    error("ERROR on binding");
+    errorPersistence("ERROR on binding");
   }
 
   // listen and bind once the client contacts
   if( listen(socketFile, 5) == -1 ){
-    error("ERROR on listen");
+    errorPersistence("ERROR on listen");
   }
 
   newSocketFile = accept(socketFile, NULL, NULL);
   if( newSocketFile < 0 ){
-    error("ERROR on accept");
+    errorPersistence("ERROR on accept");
   }
 }
 
