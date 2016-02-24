@@ -50,16 +50,17 @@ void persistenceInitialize(){
   if( newSocketFile < 0 ){
     error("ERROR on accept");
   }
+
+  // set nosigpip option so the process isn't terminated by sigpipe
+  int set = 1;
+  setsockopt(newSocketFile, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
 }
 
-void persistSenseSet(struct SenseSet *set){
+ssize_t persistSenseSet(struct SenseSet *set){
   sprintf(setString, "%lu|%f|%f|%d|%d|%d\n",
       set->timestamp, set->qOut, set->qDump,
       set->ppmOut, set->ppmIn, set->ppmRec );
-  rc = write(newSocketFile, setString, strlen(setString));
-  if( rc < 0 ){
-    error("ERROR writing to socket");
-  }
+  return write(newSocketFile, setString, strlen(setString));
 }
 
 void persistenceCleanup(){

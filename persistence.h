@@ -10,7 +10,7 @@ struct SenseSet {
   int ppmRec;
 };
 
-extern void persistSenseSet(struct SenseSet *set);
+extern ssize_t persistSenseSet(struct SenseSet *set);
 
 extern void persistenceInitialize();
 

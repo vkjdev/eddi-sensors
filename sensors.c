@@ -46,6 +46,13 @@ long flowCountOut, flowCountDump;
 struct timeval lastTime, thisTime;
 
 
+
+void error(const char *msg){
+  perror(msg);
+  exit(1);
+}
+
+
 static int analogRead(const char* fName) {
   FILE * fd;
   char val[8];
@@ -100,7 +107,14 @@ int reportSensorValues(){
 	sense.ppmIn 		= ppmFromVoltage(analogRead(SAL_IN_FILE));
 	sense.ppmRec    = ppmFromVoltage(analogRead(SAL_RECIRC_FILE));
 
-	persistSenseSet(&sense);
+	ssize_t rc = persistSenseSet(&sense);
+  if( rc == EPIPE ){
+    persistenceCleanup();
+    error("ERROR Broken Pipe");
+  } else if( rc < 0 ){
+    persistenceCleanup();
+    error("ERROR writing to socket");
+  }
 
 	lastTime = thisTime;
 	flowCountOut = 0;
