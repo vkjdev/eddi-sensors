@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <signal.h>
+#include <unistd.h>
+
 #include <persistence.h>
 
 /*
@@ -33,7 +36,7 @@ const float salSensorAreaCMSq  = 1.0;
 struct timespec tim;
 struct timespec timrem;
 
-#define PERSISTENCE_TIMER 6000 
+#define PERSISTENCE_TIMER 6000
 // every 60 seconds, log values
 
 
@@ -128,13 +131,15 @@ void checkFlowSensors(){
 
 
 
-void initializeMain(){
+void initialize(){
+  if( signal(SIGINT, sig_handler) == SIG_ERR ){
+    printf("can't catch SIGINT\n");
+    exit(1);
+  }
+
   tim.tv_sec = 0;
   tim.tv_nsec = 1000000L; // every millisecond, read sensor
   // NOTE: This should really be replaced with a timer circuit!!!
-}
-
-void initializeSensors(){
 	persistenceInitialize();
   lastFlowOut = analogRead(FLOW_OUT_FILE);
   lastFlowDump = analogRead(FLOW_DUMP_FILE);
@@ -144,11 +149,17 @@ void initializeSensors(){
 
 
 
+void sig_handler(int signo){
+  if( signo == SIGINT ){
+    persistenceCleanup();
+    exit(0);
+  }
+}
+
 
 int main(int argc, char** argv){
   printf("Initializing...\n");
-  initializeMain();
-	initializeSensors();
+  initialize();
 
   printf("Starting Sense Loop\n");
   int iterationCount = 0; // marks the approximate millisecond
