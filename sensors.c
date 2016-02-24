@@ -131,6 +131,14 @@ void checkFlowSensors(){
 
 
 
+void sig_handler(int signo){
+  if( signo == SIGINT ){
+    persistenceCleanup();
+    exit(0);
+  }
+}
+
+
 void initialize(){
   if( signal(SIGINT, sig_handler) == SIG_ERR ){
     printf("can't catch SIGINT\n");
@@ -146,15 +154,6 @@ void initialize(){
   gettimeofday( &lastTime, NULL );
 }
 
-
-
-
-void sig_handler(int signo){
-  if( signo == SIGINT ){
-    persistenceCleanup();
-    exit(0);
-  }
-}
 
 
 int main(int argc, char** argv){
