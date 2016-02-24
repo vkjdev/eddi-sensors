@@ -3,10 +3,10 @@ A lightweight C program that reads sensors pins and stores their corresponding f
 
 
 ### Compile
-run make from the parent directory
+run ```make``` from the parent directory
 
 ### Run
-run bin/sensors
+run ```bin/sensors```
 
 ### Data
-output data exists in data/${days-since-epoch}.dat
+output data is pushed to a Unix Stream Socket at ```data/sensors.sock```
