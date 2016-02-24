@@ -34,7 +34,7 @@ void persistenceInitialize(){
   // make server address
   bzero((char *) &serverAddress, sizeof(serverAddress));
   serverAddress.sun_family = AF_UNIX;
-  strncpy(serverAddress.sun_path, "./data/socket", sizeof(serverAddress.sun_path) - 1);
+  strncpy(serverAddress.sun_path, "./data/sensors.sock", sizeof(serverAddress.sun_path) - 1);
 
   // bind to socket
   if( bind(socketFile, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0){
@@ -53,7 +53,7 @@ void persistenceInitialize(){
 }
 
 void persistSenseSet(struct SenseSet *set){
-  sprintf(setString, "%lu|%f|%f|%d|%d|%d",
+  sprintf(setString, "%lu|%f|%f|%d|%d|%d\n",
       set->timestamp, set->qOut, set->qDump,
       set->ppmOut, set->ppmIn, set->ppmRec );
   rc = write(newSocketFile, setString, strlen(setString));
