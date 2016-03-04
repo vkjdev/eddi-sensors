@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
+#include <sys/inotify.h>
 
 #include <persistence.h>
 
@@ -20,6 +22,9 @@ A2(Analog) - intake salinity.
 A3(Analog) - output salinity.
 A4(Analog) - recirculation salinity.
 */
+
+#define IN_EVENT_SIZE  ( sizeof (struct inotify_event) )
+#define IN_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
 
 // Files for Sensor Pins
 #define FLOW_OUT_FILE 	"/sys/devices/12d10000.adc/iio:device0/in_voltage0_raw"
@@ -46,6 +51,10 @@ unsigned int lastFlowOut, lastFlowDump, thisFlowOut, thisFlowDump;
 long flowCountOut, flowCountDump;
 struct timeval lastTime, thisTime;
 
+pthread_t flowOutThread, flowDumpThread;
+pthread_mutex_t flowOutMutex, flowDumpMutex;
+
+
 
 
 void error(const char *msg){
@@ -65,26 +74,11 @@ static int analogRead(const char* fName) {
   }
   fgets(val, 8, fd);
   fclose(fd);
-  if( atoi(val) > 2500 ){
-    return 1;
-  } else {
-    return 0;
-  }
+  return atoi(val);
 }
 
 
 static int ppmFromVoltage(int millivolts){
-	// 1) Voltage Dividers!
-	// Req = R1 + R2
-	// I = 5 / Req
-	// V1 = I R1
-	// v1 = (5/Req) * R1
-	// r1 = (v1 * Req) / 5
-	// r1 = (v1R1 / 5) + (v1R2 / 5)
-	// 5r1 = v1r1 + v1R2
-	// r1(5 - v1) = v1R2
-	// r1 = (v1*r2) / (5 - v1)
-	// r1 = (v1/v2) * r2
   float ohms = (millivolts / (5000.0 - millivolts)) * salResistorOhms;
 
 	// TODO: Need to test in order to establish constants for the function of resistance to tds
@@ -96,8 +90,16 @@ static int ppmFromVoltage(int millivolts){
 int reportSensorValues(){
 	gettimeofday( &thisTime, NULL );
 	float elapsed = (float)(((long long int)thisTime.tv_sec * 1000000L + thisTime.tv_usec) - ((long long int)lastTime.tv_sec * 1000000L + lastTime.tv_usec))/1000000.0;
+
+  pthread_mutex_lock(&flowOutMutex);
 	float outFrequency = flowCountOut / elapsed;
+  flowCountOut = 0;
+  pthread_mutex_unlock(&flowOutMutex);
+
+  pthread_mutex_lock(&flowDumpMutex);
 	float dumpFrequency = flowCountDump / elapsed;
+  flowCountDump = 0;
+  pthread_mutex_unlock(&flowDumpMutex);
 
 	struct SenseSet sense;
 
@@ -118,31 +120,72 @@ int reportSensorValues(){
   }
 
 	lastTime = thisTime;
-	flowCountOut = 0;
-	flowCountDump = 0;
 
 	return 0;
 }
 
 
-void checkFlowSensors(){
-	// get flow out
-	thisFlowOut = analogRead(FLOW_OUT_FILE);
-	if( thisFlowOut != lastFlowOut ){
-		flowCountOut++;
-	}
-	lastFlowOut = thisFlowOut;
 
-	// get flow in
-	thisFlowDump = analogRead(FLOW_DUMP_FILE);
-	if( thisFlowDump != lastFlowDump ){
-		flowCountDump++;
-	}
-	lastFlowDump = thisFlowDump;
+
+
+
+
+
+
+
+
+
+void * monitorFlowOut( void * ptr ){
+  int inotify_fd = inotify_init();
+  if( inotify_fd < 0 ){
+    error("Inotify could not initialize");
+  }
+
+  int inotify_wd = inotify_add_watch( inotify_fd, FLOW_OUT_FILE, IN_MODIFY);
+  if( inotify_wd == -1 ){
+    error("Inotify Watch didn't work");
+  }
+
+  ssize_t numread;
+  char buffer[BUF_LEN];
+
+  for(;;){
+    numRead = read(inotify_fd, buffer, IN_BUF_LEN );
+    thisFlowOut = (analogRead(FLOW_OUT_FILE) > 2500) ? 1 : 0;
+    if( thisFlowOut != lastFlowOut ){
+      pthread_mutex_lock(&flowOutMutex);
+  		flowCountOut++;
+      pthread_mutex_unlock(&flowOutMutex);
+  	}
+  	lastFlowOut = thisFlowOut;
+  }
 }
 
+void * monitorFlowDump( void * ptr ){
+  int inotify_fd = inotify_init();
+  if( inotify_fd < 0 ){
+    error("Inotify could not initialize");
+  }
 
+  int inotify_wd = inotify_add_watch( inotify_fd, FLOW_DUMP_FILE, IN_MODIFY);
+  if( inotify_wd == -1 ){
+    error("Inotify Watch didn't work");
+  }
 
+  ssize_t numread;
+  char buffer[BUF_LEN];
+
+  for(;;){
+    numRead = read(inotify_fd, buffer, IN_BUF_LEN );
+    thisFlowOut = (analogRead(FLOW_DUMP_FILE) > 2500) ? 1 : 0;
+    if( thisFlowDump != lastFlowDump ){
+      pthread_mutex_lock(&flowDumpMutex);
+      flowDumpOut++;
+      pthread_mutex_unlock(&flowDumpMutex);
+    }
+    lastFlowDump = thisFlowDump;
+  }
+}
 
 
 
@@ -163,13 +206,19 @@ void initialize(){
     error("can't catch SIGPIPE\n");
   }
 
-  tim.tv_sec = 0;
+  tim.tv_sec = 1;
   tim.tv_nsec = 1000000L; // every millisecond, read sensor
   // NOTE: This should really be replaced with a timer circuit!!!
 	persistenceInitialize();
-  lastFlowOut = analogRead(FLOW_OUT_FILE);
-  lastFlowDump = analogRead(FLOW_DUMP_FILE);
   gettimeofday( &lastTime, NULL );
+
+  printf("Starting Flow Sense threads\n");
+  if( pthread_create( &flowOutThread, NULL, &monitorFlowOut, NULL ) != 0 ){
+    error("Could not create out flow thread");
+  }
+  if( pthread_create( &flowDumpThread, NULL, &monitorFlowDump, NULL ) != 0 ){
+    error("Could not create dump flow thread");
+  }
 }
 
 
@@ -178,17 +227,9 @@ int main(int argc, char** argv){
   printf("Initializing...\n");
   initialize();
 
-  printf("Starting Sense Loop\n");
-  int iterationCount = 0; // marks the approximate millisecond
-  while(nanosleep(&tim, &timrem) == 0){
-  	checkFlowSensors();
-
-    if( iterationCount == PERSISTENCE_TIMER ){
-      reportSensorValues();
-      iterationCount = 0;
-    } else {
-      iterationCount++;
-    }
+  printf("Starting Sense and Report Loop\n");
+  while( sleep(5) == 0){
+    reportSensorValues();
   }
 
   return 0;
