@@ -24,7 +24,7 @@ A4(Analog) - recirculation salinity.
 */
 
 #define IN_EVENT_SIZE  ( sizeof (struct inotify_event) )
-#define IN_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
+#define IN_BUF_LEN     ( 1024 * ( IN_EVENT_SIZE + 16 ) )
 
 // Files for Sensor Pins
 #define FLOW_OUT_FILE 	"/sys/devices/12d10000.adc/iio:device0/in_voltage0_raw"
@@ -146,8 +146,8 @@ void * monitorFlowOut( void * ptr ){
     error("Inotify Watch didn't work");
   }
 
-  ssize_t numread;
-  char buffer[BUF_LEN];
+  ssize_t numRead;
+  char buffer[IN_BUF_LEN];
 
   for(;;){
     numRead = read(inotify_fd, buffer, IN_BUF_LEN );
@@ -172,15 +172,15 @@ void * monitorFlowDump( void * ptr ){
     error("Inotify Watch didn't work");
   }
 
-  ssize_t numread;
-  char buffer[BUF_LEN];
+  ssize_t numRead;
+  char buffer[IN_BUF_LEN];
 
   for(;;){
     numRead = read(inotify_fd, buffer, IN_BUF_LEN );
     thisFlowOut = (analogRead(FLOW_DUMP_FILE) > 2500) ? 1 : 0;
     if( thisFlowDump != lastFlowDump ){
       pthread_mutex_lock(&flowDumpMutex);
-      flowDumpOut++;
+      flowCountDump++;
       pthread_mutex_unlock(&flowDumpMutex);
     }
     lastFlowDump = thisFlowDump;
