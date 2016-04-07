@@ -28,9 +28,9 @@ A4(Analog) - recirculation salinity.
 
 // Files for Sensor Pins
 #define FLOW_OUT_FILE 	"/sys/devices/12d10000.adc/iio:device0/in_voltage0_raw"
-#define FLOW_DUMP_FILE 	"/sys/devices/12d10000.adc/iio:device0/in_voltage1_raw"
+#define FLOW_DUMP_FILE 	"/sys/devices/12d10000.adc/iio:device0/in_voltage3_raw"
 #define SAL_IN_FILE 		"/sys/devices/12d10000.adc/iio:device0/in_voltage2_raw"
-#define SAL_OUT_FILE 		"/sys/devices/12d10000.adc/iio:device0/in_voltage3_raw"
+#define SAL_OUT_FILE 		"/sys/devices/12d10000.adc/iio:device0/in_voltage1_raw"
 #define SAL_RECIRC_FILE "/sys/devices/12d10000.adc/iio:device0/in_voltage4_raw"
 
 // Constants
