@@ -83,7 +83,9 @@ static int ppmFromVoltage(int millivolts){
 
 	// TODO: Need to test in order to establish constants for the function of resistance to tds
 
-	return ohms / 100;
+//	return ohms / 100;
+
+  return 500 * (2000 / ohms);
 }
 
 
